@@ -20,6 +20,12 @@ gamemode off     # restore it all
 - Reopens apps and browser windows, starts Docker and its containers again, and resumes each Claude session (`claude --resume`) in the same iTerm window grouping and tab order.
 - Anything you opened during the game is left alone: running apps aren't relaunched, open browser windows aren't duplicated, live sessions aren't resumed twice.
 
+## Install with an AI agent
+
+Paste this to Claude Code (or any coding agent with shell access):
+
+> Install game-mode from https://github.com/jotahcm/game-mode by following the "Instructions for AI agents" section of its README.
+
 ## Requirements
 
 - macOS
@@ -76,3 +82,33 @@ Create `~/.claude/game-mode/config.json` with app names or bundle IDs:
 ```sh
 cd ~/.claude/skills/game-mode && python3 -m unittest discover -s tests
 ```
+
+## Instructions for AI agents
+
+Follow these steps exactly to install game-mode for the user. Stop and ask the user whenever a step says so.
+
+**Never run `gamemode on` (without `--dry-run`) while installing.** It quits the user's apps and stops every Claude Code session, including yours. Only the user decides when to turn it on.
+
+1. **Check the platform.** `uname -s` must print `Darwin`; otherwise stop and tell the user game-mode only works on macOS. Check `python3 --version` works (3.8+). If it's missing, tell the user to run `xcode-select --install` and stop.
+2. **Get the code.**
+   - If `~/.claude/skills/game-mode` doesn't exist: `git clone https://github.com/jotahcm/game-mode.git ~/.claude/skills/game-mode`
+   - If it exists and is a clone of this repo (`git -C ~/.claude/skills/game-mode remote get-url origin` points at `jotahcm/game-mode`): run `git -C ~/.claude/skills/game-mode pull --ff-only`.
+   - If it exists but is anything else: stop and ask the user. Don't overwrite it.
+3. **Run the tests:** `cd ~/.claude/skills/game-mode && python3 -m unittest discover -s tests`. All must pass. If any fail, stop and show the user the output.
+4. **Put `gamemode` on the PATH.**
+   ```sh
+   chmod +x ~/.claude/skills/game-mode/scripts/gamemode.py
+   mkdir -p ~/.local/bin
+   ```
+   - If `~/.local/bin/gamemode` doesn't exist: `ln -s ~/.claude/skills/game-mode/scripts/gamemode.py ~/.local/bin/gamemode`
+   - If it's already a symlink to that script, leave it. If it's anything else, stop and ask the user.
+5. **Check `PATH`.** If `~/.local/bin` isn't on the user's `PATH`, append `export PATH="$HOME/.local/bin:$PATH"` to their shell rc file (`~/.zshrc` for zsh, the default on macOS; `~/.bash_profile` for bash), only if that line isn't already there. Tell the user to open a new terminal or `source` the file.
+6. **Verify.** Run `~/.local/bin/gamemode status` (should print "No saved game-mode state." or the saved state), then `~/.local/bin/gamemode on --dry-run` and show the user its output: that's what game mode would close. The dry run changes nothing, but macOS may show Automation permission prompts; tell the user to click Allow.
+7. **Tell the user how to use it,** in a few lines:
+   - `gamemode on` closes everything, `gamemode off` restores it, `gamemode status` shows what's saved.
+   - In Claude Code they can just say "game mode" or "restore everything" (the skill is now in `~/.claude/skills/game-mode`; a new session may be needed to pick it up).
+   - Extra apps to keep open go in `~/.claude/game-mode/config.json` as `{"keep": ["App Name"]}`.
+
+**To update later:** `git -C ~/.claude/skills/game-mode pull --ff-only`, then rerun the tests.
+
+**To uninstall:** remove `~/.local/bin/gamemode`, `~/.claude/skills/game-mode` and `~/.claude/game-mode` (ask the user first if game mode is currently on: `gamemode status` shows `Phase: on`, and deleting the state loses what it would restore).
